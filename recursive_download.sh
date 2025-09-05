@@ -103,6 +103,46 @@ if [ "$FILE_COUNT" -lt 2 ]; then
   echo "Second attempt downloaded $FILE_COUNT files."
 fi
 
+# Post-process downloaded files to remove unchanged content
+echo "Checking for unchanged files..."
+UNCHANGED_COUNT=0
+CHANGED_COUNT=0
+
+# Create a temporary backup directory
+BACKUP_DIR="../${DIR_NAME}_backup"
+if [ -d "$BACKUP_DIR" ]; then
+  echo "Found existing backup directory, comparing files..."
+  
+  # Compare each file with its backup
+  find . -type f | while read -r file; do
+    BACKUP_FILE="$BACKUP_DIR/$file"
+    if [ -f "$BACKUP_FILE" ]; then
+      if cmp -s "$file" "$BACKUP_FILE"; then
+        echo "Removing unchanged file: $file"
+        rm -f "$file"
+        # Remove parent directories if they become empty
+        DIR=$(dirname "$file")
+        while [ "$DIR" != "." ] && [ -z "$(find "$DIR" -mindepth 1 -type f 2>/dev/null)" ]; do
+          rmdir "$DIR" 2>/dev/null || break
+          DIR=$(dirname "$DIR")
+        done
+      fi
+    fi
+  done
+  
+  # Count remaining files
+  CHANGED_COUNT=$(find . -type f | wc -l)
+  echo "Files with changes: $CHANGED_COUNT"
+else
+  echo "No previous backup found, all files are new"
+  CHANGED_COUNT=$(find . -type f | wc -l)
+fi
+
+# Create/update backup for next run
+rm -rf "$BACKUP_DIR"
+cp -r . "$BACKUP_DIR"
+echo "Created backup for next comparison"
+
 echo "Recursive download completed. Files saved in: $(pwd)"
 
 # Return to original directory

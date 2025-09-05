@@ -92,5 +92,19 @@ if [ "$EXTENSION" = ".json" ]; then
   fi
 fi
 
+# Check if file already exists and compare content
+if [ -f "$FULL_PATH" ]; then
+  # Compare the downloaded content with existing file
+  if cmp -s "$TEMP_FILE" "$FULL_PATH"; then
+    echo "No changes detected for $FILENAME - skipping update"
+    rm -f "$TEMP_FILE"
+    exit 0
+  else
+    echo "Changes detected for $FILENAME - updating file"
+  fi
+else
+  echo "New file: $FILENAME"
+fi
+
 # Move to final destination
 mv "$TEMP_FILE" "$FULL_PATH"
